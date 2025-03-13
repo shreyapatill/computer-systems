@@ -1,0 +1,75 @@
+#include "sparsemat.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
+
+
+
+
+sp_tuples * load_tuples(char* input_file)
+{
+  int row, col;
+  double val;
+
+  FILE *file = fopen(input_file, "r");
+  sp_tuples *matrix = malloc(sizeof(sp_tuples));
+  fscanf( file, "%d %d\n", &(matrix->m), &(matrix->n) );
+  
+  while( feof(file) == 0 ){
+    fscanf( file, "%d %d %d\m", &row, &col, &val )
+      set_tuples( matrix, row, col, val );
+  }
+    return NULL;
+    
+}
+
+
+
+double gv_tuples(sp_tuples * mat_t,int row,int col)
+
+{
+    return 0;
+}
+
+
+
+void set_tuples(sp_tuples * mat_t, int row, int col, double value)
+{
+    return;
+}
+
+
+
+void save_tuples(char * file_name, sp_tuples * mat_t)
+{
+
+	return;
+}
+
+
+
+sp_tuples * add_tuples(sp_tuples * matA, sp_tuples * matB){
+
+	return retmat;
+}
+
+
+
+sp_tuples * mult_tuples(sp_tuples * matA, sp_tuples * matB){ 
+    return retmat;
+
+}
+
+
+	
+void destroy_tuples(sp_tuples * mat_t){
+	
+    return;
+}  
+
+
+
+
+
+

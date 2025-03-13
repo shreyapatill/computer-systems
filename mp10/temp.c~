@@ -1,0 +1,227 @@
+#include "sparsemat.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
+
+
+void deleteNode(sp_tuples * mat_t, int row, int col);
+
+
+sp_tuples * load_tuples(char* input_file)
+{
+  int row, col;
+  double val;
+
+  FILE * file = fopen(input_file, "r");
+  sp_tuples * matrix = (sp_tuples*)malloc(sizeof(sp_tuples));
+
+  fscanf( file, "%d %d\n", &(matrix->m), &(matrix->n) );
+  
+  matrix->nz = 0; 
+  matrix->tuples_head = NULL;
+
+  while( feof(file) == 0 ){
+    fscanf( file, "%d %d %lf\n", &row, &col, &val );
+    set_tuples( matrix, row, col, val );
+  }
+
+  fclose(file);
+
+  return matrix;
+}
+
+
+
+double gv_tuples(sp_tuples * mat_t,int row,int col)
+
+{
+  sp_tuples_node * cur = mat_t->tuples_head;
+     
+  while( cur != NULL ){
+    if( (cur->row)==row && (cur->col)==col )
+      return (cur->value);
+    else
+      cur = cur->next;
+  }  
+
+  return 0;
+}
+
+
+
+void set_tuples(sp_tuples * mat_t, int row, int col, double value)
+{
+  //if list is empty, we allocate memory
+  if( mat_t->tuples_head == NULL ){
+    sp_tuples_node * node = (sp_tuples_node*)malloc( sizeof(sp_tuples_node) );
+    node->row = row;
+    node->col = col;
+    node->value = value;
+    node->next = NULL;
+    mat_t->tuples_head = node;
+    mat_t->nz++;
+    return;
+  }
+ 
+  //if value is 0, delete the node at row, col
+  if( value == 0 ){
+    deleteNode( mat_t, row, col);
+    return;
+  }
+  
+  sp_tuples_node * curr_node = mat_t->tuples_head;
+
+  int index = row * mat_t->n + col;
+  int curr_index = curr_node->row * mat_t->n + curr_node->col;
+
+  if( index < curr_index ){
+    if( curr_node->row == row && curr_node->col == col ){
+      //set value of head node if given row and col match up with current head row and col
+      curr_node->value = value;
+    }else{
+      //if given index comes before current head index, allocate memory and place node as new head in linked list
+      sp_tuples_node * node = (sp_tuples_node*)malloc( sizeof(sp_tuples_node) );
+      node->row = row;
+      node->col = col;
+      node->value = value;
+      node->next = curr_node;
+      mat_t->tuples_head = node;
+      mat_t->nz++;
+      return;
+    }
+  }
+  
+  //iterate through linked list
+  while( curr_node != NULL ){
+    curr_index = curr_node->row * mat_t->n + curr_node->col;
+    if( index == curr_index ){
+      //replace value if index matches
+      curr_node->value = value;
+      return;
+    }
+    curr_node = curr_node->next;
+  }
+
+  curr_node = mat_t->tuples_head;
+  while( curr_node->next != NULL && (curr_node->next)->row * mat_t->n + (curr_node->next)->col < index ){
+    curr_node = curr_node->next;
+  }
+
+  //if curr_node->next is NULL, we replace the end node
+  if( curr_node->next == NULL ){
+    sp_tuples_node * node = (sp_tuples_node*)malloc( sizeof(sp_tuples_node) );
+    node->row = row;
+    node->col = col;
+    node->value = value;
+    curr_node->next = node;
+    node->next = NULL;
+    mat_t->nz++;
+    return;
+  }
+
+  //if node is in the middle,  allocate memory and place in correct location
+  sp_tuples_node * node = (sp_tuples_node*)malloc( sizeof(sp_tuples_node) );
+  node->row = row;
+  node->col = col;
+  node->value = value;
+  node->next = curr_node->next;
+  curr_node->next = node;
+  mat_t->nz++;
+  return;
+}
+
+void deleteNode(sp_tuples * mat_t, int row, int col){
+  sp_tuples_node * prev_node = NULL;
+  sp_tuples_node * curr_node = mat_t->tuples_head;
+
+  while( curr_node != NULL ){
+    if( curr_node->row == row  && curr_node->col == col ){
+      if( prev_node == NULL )
+	mat_t->tuples_head = curr_node->next;
+      else
+	prev_node->next = curr_node->next;
+      free( curr_node );
+      mat_t->nz--;
+    }else{
+      prev_node = curr_node;
+      curr_node = curr_node->next;
+    }
+  }
+}
+
+
+void save_tuples(char * file_name, sp_tuples * mat_t)
+{
+  if( mat_t == NULL )
+    return;
+
+  FILE * file = fopen( file_name, "w" );
+  
+
+  fprintf( file, "%d %d\n", mat_t->m, mat_t->n );
+  sp_tuples_node * node = mat_t->tuples_head;
+	   
+  while( node != NULL ){
+    fscanf( file, "%d %d %lf\n", &(node->row), &(node->col), &(node->value) );
+    node = (node->next);
+  }
+
+  fclose( file );	
+
+  return;
+}
+
+
+
+sp_tuples * add_tuples(sp_tuples * matA, sp_tuples * matB){
+  sp_tuples * matC = (sp_tuples *)malloc(sizeof(sp_tuples));
+  matC->m = matA->m;
+  matC->n = matA->n;
+  matC->nz = 0;
+  sp_tuples_node * node = matA->tuples_head;
+
+  while( node != NULL ){
+    set_tuples( matC, node->row, node->col, node->value );
+    node = node->next;
+  }
+  
+  node = matB->tuples_head;
+  while( node != NULL ){
+    double B_val = gv_tuples( matB, node->row, node->col );
+    set_tuples( matC, node->row, node->col, node->value + B_val );
+    node = node->next;
+  }
+
+  return matA;
+}
+
+
+
+sp_tuples * mult_tuples(sp_tuples * matA, sp_tuples * matB){ 
+    return matA;
+
+}
+
+
+	
+void destroy_tuples(sp_tuples * mat_t){
+  sp_tuples_node * node = (mat_t->tuples_head);
+  sp_tuples_node * temp = NULL;
+
+  while( node != NULL ){
+    temp = (node->next);
+    free( node );
+    node = temp;
+  }
+    
+  free( mat_t );
+
+  return;
+}  
+
+
+
+
+
+
